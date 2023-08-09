@@ -295,7 +295,7 @@ class YOLOv3LightningModel(pl.LightningModule):
         return self.trainer.train_dataloader
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-6, weight_decay=0.01)
+        optimizer = torch.optim.Adam(self.parameters(), lr=cfg.LEARNING_RATE, weight_decay=cfg.WEIGHT_DECAY)
         scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer,
                                                   max_lr=cfg.LEARNING_RATE,
                                                   epochs=self.trainer.max_epochs,

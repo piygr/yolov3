@@ -1,6 +1,6 @@
 from torch_lr_finder import LRFinder
 
-import config
+import config as cfg
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import numpy as np
@@ -237,7 +237,7 @@ def mean_average_precision(
 def plot_image(image, boxes):
     """Plots predicted bounding boxes on the image"""
     cmap = plt.get_cmap("tab20b")
-    class_labels = config.COCO_LABELS if config.DATASET=='COCO' else config.PASCAL_CLASSES
+    class_labels = cfg.COCO_LABELS if cfg.DATASET=='COCO' else cfg.PASCAL_CLASSES
     colors = [cmap(i) for i in np.linspace(0, 1, len(class_labels))]
     im = np.array(image)
     height, width, _ = im.shape
@@ -382,12 +382,12 @@ def check_class_accuracy(model, loader, threshold):
     tot_obj, correct_obj = 0, 0
 
     for idx, (x, y) in enumerate(tqdm(loader)):
-        x = x.to(config.DEVICE)
+        x = x.to(cfg.DEVICE)
         with torch.no_grad():
             out = model(x)
 
         for i in range(3):
-            y[i] = y[i].to(config.DEVICE)
+            y[i] = y[i].to(cfg.DEVICE)
             obj = y[i][..., 0] == 1 # in paper this is Iobj_i
             noobj = y[i][..., 0] == 0  # in paper this is Iobj_i
 
@@ -425,53 +425,53 @@ def get_mean_std(loader):
 def get_loaders(train_csv_path, test_csv_path):
     from dataset import YOLODataset
 
-    IMAGE_SIZE = config.IMAGE_SIZE
+    IMAGE_SIZE = cfg.IMAGE_SIZE
     train_dataset = YOLODataset(
         train_csv_path,
-        transform=config.train_transforms,
+        transform=cfg.train_transforms,
         S=[IMAGE_SIZE // 32, IMAGE_SIZE // 16, IMAGE_SIZE // 8],
-        img_dir=config.IMG_DIR,
-        label_dir=config.LABEL_DIR,
-        anchors=config.ANCHORS,
+        img_dir=cfg.IMG_DIR,
+        label_dir=cfg.LABEL_DIR,
+        anchors=cfg.ANCHORS,
     )
     test_dataset = YOLODataset(
         test_csv_path,
-        transform=config.test_transforms,
+        transform=cfg.test_transforms,
         S=[IMAGE_SIZE // 32, IMAGE_SIZE // 16, IMAGE_SIZE // 8],
-        img_dir=config.IMG_DIR,
-        label_dir=config.LABEL_DIR,
-        anchors=config.ANCHORS,
+        img_dir=cfg.IMG_DIR,
+        label_dir=cfg.LABEL_DIR,
+        anchors=cfg.ANCHORS,
     )
     train_loader = DataLoader(
         dataset=train_dataset,
-        batch_size=config.BATCH_SIZE,
-        num_workers=config.NUM_WORKERS,
-        pin_memory=config.PIN_MEMORY,
+        batch_size=cfg.BATCH_SIZE,
+        num_workers=cfg.NUM_WORKERS,
+        pin_memory=cfg.PIN_MEMORY,
         shuffle=True,
         drop_last=False,
     )
     test_loader = DataLoader(
         dataset=test_dataset,
-        batch_size=config.BATCH_SIZE,
-        num_workers=config.NUM_WORKERS,
-        pin_memory=config.PIN_MEMORY,
+        batch_size=cfg.BATCH_SIZE,
+        num_workers=cfg.NUM_WORKERS,
+        pin_memory=cfg.PIN_MEMORY,
         shuffle=False,
         drop_last=False,
     )
 
     train_eval_dataset = YOLODataset(
         train_csv_path,
-        transform=config.test_transforms,
+        transform=cfg.test_transforms,
         S=[IMAGE_SIZE // 32, IMAGE_SIZE // 16, IMAGE_SIZE // 8],
-        img_dir=config.IMG_DIR,
-        label_dir=config.LABEL_DIR,
-        anchors=config.ANCHORS,
+        img_dir=cfg.IMG_DIR,
+        label_dir=cfg.LABEL_DIR,
+        anchors=cfg.ANCHORS,
     )
     train_eval_loader = DataLoader(
         dataset=train_eval_dataset,
-        batch_size=config.BATCH_SIZE,
-        num_workers=config.NUM_WORKERS,
-        pin_memory=config.PIN_MEMORY,
+        batch_size=cfg.BATCH_SIZE,
+        num_workers=cfg.NUM_WORKERS,
+        pin_memory=cfg.PIN_MEMORY,
         shuffle=False,
         drop_last=False,
     )
