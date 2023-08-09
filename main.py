@@ -15,19 +15,22 @@ def init(model, basic_sanity_check=True, find_max_lr=True, **kwargs):
             utils.find_lr(model, optimizer, criterion, train_loader)
             print("Set find_max_lr to False to proceed further")
         else:
-            if cfg.LOAD_MODEL:
-                trainer = pl.Trainer(
-                    checkpoint_path=cfg.CHECKPOINT_FILE
-                )
-            else:
-                trainer = pl.Trainer(
-                    precision=16,
-                    max_epochs=cfg.NUM_EPOCHS
-                )
 
             train_loader = kwargs.get('train_loader')
             val_loader = kwargs.get('test_loader')
-            trainer.fit(model, train_loader, val_loader)
+
+            trainer = pl.Trainer(
+                precision=16,
+                max_epochs=cfg.NUM_EPOCHS,
+                accelerator='gpu'
+            )
+
+            cargs = {}
+            if cfg.LOAD_MODEL:
+                cargs = dict(ckpt_path=cfg.CHECKPOINT_FILE)
+
+            trainer.fit(model, train_loader, val_loader, **cargs)
+
 
             scaled_anchors = (
                     torch.tensor(cfg.ANCHORS)
