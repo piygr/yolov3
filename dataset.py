@@ -54,7 +54,7 @@ class YOLODataset(Dataset):
         # YOLOv5 4-mosaic loader. Loads 1 image + 3 random images into a 4-image mosaic
         labels4 = []
         s = self.image_size
-        yc, xc = (int(random.uniform(0, x)) for x in self.mosaic_border)  # mosaic center x, y
+        yc, xc = (int(random.uniform(x, 2*s - x)) for x in self.mosaic_border)  # mosaic center x, y
         indices = [index] + random.choices(range(len(self)), k=3)  # 3 additional image indices
         random.shuffle(indices)
         for i, index in enumerate(indices):
