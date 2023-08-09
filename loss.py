@@ -30,11 +30,12 @@ class YoloLoss(pl.LightningModule):
             * torch.tensor(cfg.S).unsqueeze(1).unsqueeze(1).repeat(1, 3, 2)
         )
 
-    def forward(self, predictions, target, anchors):
+    def forward(self, predictions, target, **kwargs):
 
+        anchors = kwargs.get('anchors', None)
         if not anchors:
             anchors = self.scaled_anchors
-
+            
         # Check where obj and noobj (we ignore if target == -1)
         obj = target[..., 0] == 1  # in paper this is Iobj_i
         noobj = target[..., 0] == 0  # in paper this is Inoobj_i
