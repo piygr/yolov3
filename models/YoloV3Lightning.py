@@ -101,11 +101,16 @@ class ScalePrediction(nn.Module):
 
 
 class YOLOv3LightningModel(pl.LightningModule):
-    def __init__(self, in_channels=3, num_classes=20):
+    def __init__(self, in_channels=3, num_classes=20, anchors=None, S=None):
         super().__init__()
         self.num_classes = num_classes
         self.in_channels = in_channels
         self.layers = self._create_conv_layers()
+        self.anchor_list = (
+                torch.tensor(anchors)
+                * torch.tensor(S).unsqueeze(1).unsqueeze(1).repeat(1, 3, 2)
+        )
+
         self.criterion = YoloLoss()
 
         self.metric = dict(
@@ -189,7 +194,7 @@ class YOLOv3LightningModel(pl.LightningModule):
     def training_step(self, train_batch, batch_idx):
         x, target = train_batch
         output = self.forward(x)
-        loss = self.criterion(output, target, loss_dict=True)
+        loss = self.criterion(output, target, loss_dict=True, anchor_list=self.anchor_list)
         acc = self.criterion.check_class_accuracy(output, target, cfg.CONF_THRESHOLD)
 
         self.metric['total_train_steps'] += 1
@@ -205,7 +210,7 @@ class YOLOv3LightningModel(pl.LightningModule):
     def validation_step(self, val_batch, batch_idx):
         x, target = val_batch
         output = self.forward(x)
-        loss = self.criterion(output, target, loss_dict=True)
+        loss = self.criterion(output, target, loss_dict=True, anchor_list=self.anchor_list)
         acc = self.criterion.check_class_accuracy(output, target, cfg.CONF_THRESHOLD)
 
         self.metric['total_val_steps'] += 1
