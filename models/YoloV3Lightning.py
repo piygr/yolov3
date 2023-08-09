@@ -202,7 +202,7 @@ class YOLOv3LightningModel(pl.LightningModule):
         self.metric['epoch_train_loss'].append(loss)
         self.metric['epoch_train_acc'].append(acc)
 
-        self.log_dict({'train_loss': loss})
+        self.log_dict({'train_loss': loss['total_loss']})
 
         return loss['total_loss']
 
@@ -218,7 +218,7 @@ class YOLOv3LightningModel(pl.LightningModule):
         self.metric['epoch_val_loss'].append(loss)
         self.metric['epoch_val_acc'].append(acc)
 
-        self.log_dict({'val_loss': loss})
+        self.log_dict({'val_loss': loss['total_loss']})
 
 
     def on_validation_epoch_end(self):
