@@ -189,7 +189,7 @@ class YOLOv3LightningModel(pl.LightningModule):
     def training_step(self, train_batch, batch_idx):
         x, target = train_batch
         output = self.forward(x)
-        loss = self.criterion(output, target, cfg.ANCHORS)
+        loss = self.criterion(output, target, loss_dict=True)
         acc = self.criterion.check_class_accuracy(output, target, cfg.CONF_THRESHOLD)
 
         self.metric['total_train_steps'] += 1
@@ -205,7 +205,7 @@ class YOLOv3LightningModel(pl.LightningModule):
     def validation_step(self, val_batch, batch_idx):
         x, target = val_batch
         output = self.forward(x)
-        loss = self.criterion(output, target, cfg.ANCHORS)
+        loss = self.criterion(output, target, loss_dict=True)
         acc = self.criterion.check_class_accuracy(output, target, cfg.CONF_THRESHOLD)
 
         self.metric['total_val_steps'] += 1

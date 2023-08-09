@@ -35,7 +35,7 @@ class YoloLoss(pl.LightningModule):
         anchors = kwargs.get('anchors', None)
         if not anchors:
             anchors = self.scaled_anchors
-            
+
         # Check where obj and noobj (we ignore if target == -1)
         obj = target[..., 0] == 1  # in paper this is Iobj_i
         noobj = target[..., 0] == 0  # in paper this is Inoobj_i
@@ -88,12 +88,16 @@ class YoloLoss(pl.LightningModule):
             + self.lambda_noobj * no_object_loss
             + self.lambda_class * class_loss
         )
-        return dict(class_loss=self.lambda_class * class_loss,
+
+        if kwargs.get('loss_dict'):
+            return dict(class_loss=self.lambda_class * class_loss,
                     no_object_loss=self.lambda_noobj * no_object_loss,
                     object_loss=self.lambda_obj * object_loss,
                     box_loss=self.lambda_box * box_loss,
                     total_loss=total_loss
                     )
+        else:
+            return total_loss
 
 
     def check_class_accuracy(self, predictions, target, threshold):
