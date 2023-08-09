@@ -1,3 +1,5 @@
+from torch_lr_finder import LRFinder
+
 import config
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -420,28 +422,6 @@ def get_mean_std(loader):
 
     return mean, std
 
-
-def save_checkpoint(model, optimizer, filename="my_checkpoint.pth.tar"):
-    print("=> Saving checkpoint")
-    checkpoint = {
-        "state_dict": model.state_dict(),
-        "optimizer": optimizer.state_dict(),
-    }
-    torch.save(checkpoint, filename)
-
-
-def load_checkpoint(checkpoint_file, model, optimizer, lr):
-    print("=> Loading checkpoint")
-    checkpoint = torch.load(checkpoint_file, map_location=config.DEVICE)
-    model.load_state_dict(checkpoint["state_dict"])
-    optimizer.load_state_dict(checkpoint["optimizer"])
-
-    # If we don't do this then it will just have learning rate of old checkpoint
-    # and it will lead to many hours of debugging \:
-    for param_group in optimizer.param_groups:
-        param_group["lr"] = lr
-
-
 def get_loaders(train_csv_path, test_csv_path):
     from dataset import YOLODataset
 
@@ -580,3 +560,10 @@ def clip_boxes(boxes, shape):
     else:  # np.array (faster grouped)
         boxes[..., [0, 2]] = boxes[..., [0, 2]].clip(0, shape[1])  # x1, x2
         boxes[..., [1, 3]] = boxes[..., [1, 3]].clip(0, shape[0])  # y1, y2
+
+
+def find_lr(model, optimizer, criterion, data_loader):
+    lr_finder = LRFinder(model, optimizer, criterion)
+    lr_finder.range_test(data_loader, end_lr=100, num_iter=100)
+    _, best_lr = lr_finder.plot()  # to inspect the loss-learning rate graph
+    lr_finder.reset()

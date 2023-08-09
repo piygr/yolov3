@@ -3,7 +3,7 @@ import torch.nn as nn
 import pytorch_lightning as pl
 
 from loss import YoloLoss
-from config import *
+import config as cfg
 
 """ 
 Information about architecture config:
@@ -100,13 +100,28 @@ class ScalePrediction(nn.Module):
         )
 
 
-class YOLOv3Lightning(pl.LightningModule):
+class YOLOv3LightningModel(pl.LightningModule):
     def __init__(self, in_channels=3, num_classes=20):
         super().__init__()
         self.num_classes = num_classes
         self.in_channels = in_channels
         self.layers = self._create_conv_layers()
         self.criterion = YoloLoss()
+
+        self.metric = dict(
+            total_train_steps=0,
+            epoch_train_loss=[],
+            epoch_train_acc=[],
+            epoch_train_steps=0,
+            total_val_steps=0,
+            epoch_val_loss=[],
+            epoch_val_acc=[],
+            epoch_val_steps=0,
+            train_loss=[],
+            val_loss=[],
+            train_acc=[],
+            val_acc=[]
+        )
 
     def forward(self, x):
         outputs = []  # for each scale
@@ -174,23 +189,100 @@ class YOLOv3Lightning(pl.LightningModule):
     def training_step(self, train_batch, batch_idx):
         x, target = train_batch
         output = self.forward(x)
-        loss = self.criterion(output, target, ANCHORS)
+        loss = self.criterion(output, target, cfg.ANCHORS)
+        acc = self.criterion.check_class_accuracy(output, target, cfg.CONF_THRESHOLD)
 
-        #self.metric['train'] += get_correct_pred_count(output, target)
-        #self.metric['train_total'] += len(x)
-        #self.metric['epoch_train_loss'].append(loss)
+        self.metric['total_train_steps'] += 1
+        self.metric['epoch_train_steps'] += 1
+        self.metric['epoch_train_loss'].append(loss)
+        self.metric['epoch_train_acc'].append(acc)
 
-        #acc = 100 * self.metric['train'] / self.metric['train_total']
+        self.log_dict({'train_loss': loss})
 
-        self.log_dict({'train_loss': loss, 'train_acc': acc})
-        return loss
+        return loss['total_loss']
 
 
     def validation_step(self, val_batch, batch_idx):
         x, target = val_batch
         output = self.forward(x)
-        loss = self.criterion(output, target, ANCHORS)
+        loss = self.criterion(output, target, cfg.ANCHORS)
+        acc = self.criterion.check_class_accuracy(output, target, cfg.CONF_THRESHOLD)
 
+        self.metric['total_val_steps'] += 1
+        self.metric['epoch_val_steps'] += 1
+        self.metric['epoch_val_loss'].append(loss)
+        self.metric['epoch_val_acc'].append(acc)
+
+        self.log_dict({'val_loss': loss})
+
+
+    def on_validation_epoch_end(self):
+        if self.metric['total_train_steps']:
+            print('Epoch ', self.current_epoch)
+            epoch_loss = 0
+            epoch_acc = dict(
+                correct_class=0,
+                correct_noobj=0,
+                correct_obj=0,
+                total_class_preds=0,
+                total_noobj=0,
+                total_obj=0
+            )
+            for i in range(self.metric['epoch_train_steps']):
+                lo = self.metric['epoch_train_loss'][i]
+                epoch_loss += lo['total_loss']
+                acc = self.metric['epoch_train_acc'][i]
+                epoch_acc['correct_class'] += acc['correct_class']
+                epoch_acc['correct_noobj'] += acc['correct_noobj']
+                epoch_acc['correct_obj'] += acc['correct_obj']
+                epoch_acc['total_class_preds'] += acc['total_class_preds']
+                epoch_acc['total_noobj'] += acc['total_noobj']
+                epoch_acc['total_obj'] += acc['total_obj']
+
+
+            print("Train -")
+            print(f"Class accuracy is: {(epoch_acc['correct_class']/(epoch_acc['total_class_preds']+1e-16))*100:2f}%")
+            print(f"No obj accuracy is: {(epoch_acc['correct_noobj']/(epoch_acc['total_noobj']+1e-16))*100:2f}%")
+            print(f"Obj accuracy is: {(epoch_acc['correct_obj']/(epoch_acc['total_obj']+1e-16))*100:2f}%")
+            print(f"Total loss: {(epoch_loss/(len(self.metric['epoch_train_loss'])+1e-16)):2f}")
+
+            self.metric['epoch_train_loss'] = []
+            self.metric['epoch_train_acc'] = []
+            self.metric['epoch_train_steps'] = 0
+
+            #---
+            epoch_loss = 0
+            epoch_acc = dict(
+                correct_class=0,
+                correct_noobj=0,
+                correct_obj=0,
+                total_class_preds=0,
+                total_noobj=0,
+                total_obj=0
+            )
+            for i in range(self.metric['epoch_val_steps']):
+                lo = self.metric['epoch_val_loss'][i]
+                epoch_loss += lo['total_loss']
+                acc = self.metric['epoch_val_acc'][i]
+                epoch_acc['correct_class'] += acc['correct_class']
+                epoch_acc['correct_noobj'] += acc['correct_noobj']
+                epoch_acc['correct_obj'] += acc['correct_obj']
+                epoch_acc['total_class_preds'] += acc['total_class_preds']
+                epoch_acc['total_noobj'] += acc['total_noobj']
+                epoch_acc['total_obj'] += acc['total_obj']
+
+            print("Validation -")
+            print(f"Class accuracy is: {(epoch_acc['correct_class']/(epoch_acc['total_class_preds']+1e-16))*100:2f}%")
+            print(f"No obj accuracy is: {(epoch_acc['correct_noobj']/(epoch_acc['total_noobj']+1e-16))*100:2f}%")
+            print(f"Obj accuracy is: {(epoch_acc['correct_obj']/(epoch_acc['total_obj']+1e-16))*100:2f}%")
+            print(f"Total loss: {(epoch_loss/(len(self.metric['epoch_val_loss'])+1e-16)):2f}")
+
+            self.metric['epoch_val_loss'] = []
+            self.metric['epoch_val_acc'] = []
+            self.metric['epoch_val_steps'] = 0
+
+            print("Creating checkpoint...")
+            self.trainer.save_checkpoint(cfg.CHECKPOINT_FILE)
 
 
     def test_step(self, test_batch, batch_idx):
@@ -204,13 +296,11 @@ class YOLOv3Lightning(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-6, weight_decay=0.01)
-        self.find_lr(optimizer)
-        print(self.max_lr)
         scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer,
-                                                  max_lr=self.max_lr,
+                                                  max_lr=cfg.LEARNING_RATE,
                                                   epochs=self.trainer.max_epochs,
                                                   steps_per_epoch=len(self.train_dataloader()),
-                                                  pct_start=5 / self.trainer.max_epochs,
+                                                  pct_start=8 / self.trainer.max_epochs,
                                                   div_factor=100,
                                                   final_div_factor=100,
                                                   three_phase=False,
@@ -225,13 +315,11 @@ class YOLOv3Lightning(pl.LightningModule):
             },
         }
 
-'''
-if __name__ == "__main__":
-    num_classes = NUM_CLASSES
-    model = YOLOv3Lightning(num_classes=num_classes)
-    x = torch.randn((2, 3, IMAGE_SIZE, IMAGE_SIZE))
+
+def sanity_check(model):
+    x = torch.randn((2, 3, cfg.IMAGE_SIZE, cfg.IMAGE_SIZE))
     out = model(x)
-    assert model(x)[0].shape == (2, 3, IMAGE_SIZE//32, IMAGE_SIZE//32, num_classes + 5)
-    assert model(x)[1].shape == (2, 3, IMAGE_SIZE//16, IMAGE_SIZE//16, num_classes + 5)
-    assert model(x)[2].shape == (2, 3, IMAGE_SIZE//8, IMAGE_SIZE//8, num_classes + 5)
-    print("Success!")'''
+    assert model(x)[0].shape == (2, 3, cfg.IMAGE_SIZE // 32, cfg.IMAGE_SIZE // 32, cfg.NUM_CLASSES + 5)
+    assert model(x)[1].shape == (2, 3, cfg.IMAGE_SIZE // 16, cfg.IMAGE_SIZE // 16, cfg.NUM_CLASSES + 5)
+    assert model(x)[2].shape == (2, 3, cfg.IMAGE_SIZE // 8, cfg.IMAGE_SIZE // 8, cfg.NUM_CLASSES + 5)
+    print("Success!")

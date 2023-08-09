@@ -1,8 +1,7 @@
 """
 Creates a Pytorch dataset to load the Pascal VOC & MS COCO datasets
 """
-
-import config
+import config as cfg
 import numpy as np
 import os
 import pandas as pd
@@ -149,16 +148,16 @@ class YOLODataset(Dataset):
 
         return image, tuple(targets)
 
-'''
-def test():
-    anchors = config.ANCHORS
 
-    transform = config.test_transforms
+def validate_dataset():
+    anchors = cfg.ANCHORS
+
+    transform = cfg.test_transforms
 
     dataset = YOLODataset(
-        "COCO/train.csv",
-        "COCO/images/images/",
-        "COCO/labels/labels_new/",
+        cfg.SAMPLE_DATASET + "/25examples.csv",
+        cfg.SAMPLE_DATASET + "/images/",
+        cfg.SAMPLE_DATASET + "/labels/",
         S=[13, 26, 52],
         anchors=anchors,
         transform=transform,
@@ -181,8 +180,3 @@ def test():
         boxes = nms(boxes, iou_threshold=1, threshold=0.7, box_format="midpoint")
         print(boxes)
         plot_image(x[0].permute(1, 2, 0).to("cpu"), boxes)
-
-
-if __name__ == "__main__":
-    test()
-'''

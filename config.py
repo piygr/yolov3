@@ -4,11 +4,11 @@ import torch
 
 from albumentations.pytorch import ToTensorV2
 
-
+SAMPLE_DATASET = '../../input/d/piygro/sample-pascal/PASCAL_VOC'
 DATASET = 'PASCAL_VOC'
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # seed_everything()  # If you want deterministic behavior
-NUM_WORKERS = 0
+NUM_WORKERS = 2
 BATCH_SIZE = 32
 IMAGE_SIZE = 416
 NUM_CLASSES = 20
@@ -22,7 +22,7 @@ S = [IMAGE_SIZE // 32, IMAGE_SIZE // 16, IMAGE_SIZE // 8]
 PIN_MEMORY = True
 LOAD_MODEL = False
 SAVE_MODEL = True
-CHECKPOINT_FILE = "checkpoint.pth.tar"
+CHECKPOINT_FILE = "checkpoint.ckpt.tar"
 IMG_DIR = DATASET + "/images/"
 LABEL_DIR = DATASET + "/labels/"
 
