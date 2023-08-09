@@ -30,57 +30,67 @@ class YoloLoss(pl.LightningModule):
             * torch.tensor(cfg.S).unsqueeze(1).unsqueeze(1).repeat(1, 3, 2)
         )
 
-    def forward(self, predictions, target, **kwargs):
+    def forward(self, predictions_list, target_list, **kwargs):
 
-        anchors = kwargs.get('anchors', None)
-        if not anchors:
-            anchors = self.scaled_anchors
+        anchors_list = kwargs.get('anchors_list', None)
+        if not anchors_list:
+            anchors_list = self.scaled_anchors
 
-        # Check where obj and noobj (we ignore if target == -1)
-        obj = target[..., 0] == 1  # in paper this is Iobj_i
-        noobj = target[..., 0] == 0  # in paper this is Inoobj_i
+        box_loss = 0.0
+        object_loss = 0.0
+        no_object_loss = 0.0
+        class_loss = 0.0
 
-        # ======================= #
-        #   FOR NO OBJECT LOSS    #
-        # ======================= #
+        for i in range(3):
+            target = target_list[i]
+            predictions = predictions_list[i]
+            anchors = anchors_list[i]
 
-        no_object_loss = self.bce(
-            (predictions[..., 0:1][noobj]), (target[..., 0:1][noobj]),
-        )
+            # Check where obj and noobj (we ignore if target == -1)
+            obj = target[..., 0] == 1  # in paper this is Iobj_i
+            noobj = target[..., 0] == 0  # in paper this is Inoobj_i
 
-        # ==================== #
-        #   FOR OBJECT LOSS    #
-        # ==================== #
+            # ======================= #
+            #   FOR NO OBJECT LOSS    #
+            # ======================= #
 
-        anchors = anchors.reshape(1, 3, 1, 1, 2)
-        box_preds = torch.cat([self.sigmoid(predictions[..., 1:3]), torch.exp(predictions[..., 3:5]) * anchors], dim=-1)
-        ious = intersection_over_union(box_preds[obj], target[..., 1:5][obj]).detach()
-        object_loss = self.mse(self.sigmoid(predictions[..., 0:1][obj]), ious * target[..., 0:1][obj])
+            no_object_loss += self.bce(
+                (predictions[..., 0:1][noobj]), (target[..., 0:1][noobj]),
+            )
 
-        # ======================== #
-        #   FOR BOX COORDINATES    #
-        # ======================== #
+            # ==================== #
+            #   FOR OBJECT LOSS    #
+            # ==================== #
 
-        predictions[..., 1:3] = self.sigmoid(predictions[..., 1:3])  # x,y coordinates
-        target[..., 3:5] = torch.log(
-            (1e-16 + target[..., 3:5] / anchors)
-        )  # width, height coordinates
-        box_loss = self.mse(predictions[..., 1:5][obj], target[..., 1:5][obj])
+            anchors = anchors.reshape(1, 3, 1, 1, 2)
+            box_preds = torch.cat([self.sigmoid(predictions[..., 1:3]), torch.exp(predictions[..., 3:5]) * anchors], dim=-1)
+            ious = intersection_over_union(box_preds[obj], target[..., 1:5][obj]).detach()
+            object_loss += self.mse(self.sigmoid(predictions[..., 0:1][obj]), ious * target[..., 0:1][obj])
 
-        # ================== #
-        #   FOR CLASS LOSS   #
-        # ================== #
+            # ======================== #
+            #   FOR BOX COORDINATES    #
+            # ======================== #
 
-        class_loss = self.entropy(
-            (predictions[..., 5:][obj]), (target[..., 5][obj].long()),
-        )
+            predictions[..., 1:3] = self.sigmoid(predictions[..., 1:3])  # x,y coordinates
+            target[..., 3:5] = torch.log(
+                (1e-16 + target[..., 3:5] / anchors)
+            )  # width, height coordinates
+            box_loss += self.mse(predictions[..., 1:5][obj], target[..., 1:5][obj])
 
-        #print("__________________________________")
-        #print(self.lambda_box * box_loss)
-        #print(self.lambda_obj * object_loss)
-        #print(self.lambda_noobj * no_object_loss)
-        #print(self.lambda_class * class_loss)
-        #print("\n")
+            # ================== #
+            #   FOR CLASS LOSS   #
+            # ================== #
+
+            class_loss += self.entropy(
+                (predictions[..., 5:][obj]), (target[..., 5][obj].long()),
+            )
+
+            #print("__________________________________")
+            #print(self.lambda_box * box_loss)
+            #print(self.lambda_obj * object_loss)
+            #print(self.lambda_noobj * no_object_loss)
+            #print(self.lambda_class * class_loss)
+            #print("\n")
 
         total_loss = (
             self.lambda_box * box_loss

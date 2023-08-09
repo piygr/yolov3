@@ -25,18 +25,18 @@ def init(model, basic_sanity_check=True, find_max_lr=True, **kwargs):
                     max_epochs=cfg.NUM_EPOCHS
                 )
 
-            train_loader = kwargs.get('train_dataloader')
-            test_loader = kwargs.get('test_dataloader')
-            trainer.fit(model, train_loader, test_loader)
+            train_loader = kwargs.get('train_loader')
+            val_loader = kwargs.get('test_loader')
+            trainer.fit(model, train_loader, val_loader)
 
             scaled_anchors = (
                     torch.tensor(cfg.ANCHORS)
                     * torch.tensor(cfg.S).unsqueeze(1).unsqueeze(1).repeat(1, 3, 2)
             )
-            utils.plot_couple_examples(model, test_loader, 0.6, 0.5, scaled_anchors)
+            utils.plot_couple_examples(model, val_loader, 0.6, 0.5, scaled_anchors)
 
             pred_boxes, true_boxes = utils.get_evaluation_bboxes(
-                test_loader,
+                val_loader,
                 model,
                 iou_threshold=config.NMS_IOU_THRESH,
                 anchors=config.ANCHORS,
