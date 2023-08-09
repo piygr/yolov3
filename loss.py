@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 from utils import intersection_over_union
+import config as cfg
 
 
 class YoloLoss(pl.LightningModule):
@@ -24,7 +25,16 @@ class YoloLoss(pl.LightningModule):
         self.lambda_obj = 1
         self.lambda_box = 10
 
+        self.scaled_anchors = (
+            torch.tensor(cfg.ANCHORS)
+            * torch.tensor(cfg.S).unsqueeze(1).unsqueeze(1).repeat(1, 3, 2)
+        )
+
     def forward(self, predictions, target, anchors):
+
+        if not anchors:
+            anchors = self.scaled_anchors
+
         # Check where obj and noobj (we ignore if target == -1)
         obj = target[..., 0] == 1  # in paper this is Iobj_i
         noobj = target[..., 0] == 0  # in paper this is Inoobj_i
@@ -117,6 +127,6 @@ class YoloLoss(pl.LightningModule):
             total_obj=tot_obj
         )
 
-        print(f"Class accuracy is: {(correct_class/(tot_class_preds+1e-16))*100:2f}%")
+        '''print(f"Class accuracy is: {(correct_class/(tot_class_preds+1e-16))*100:2f}%")
         print(f"No obj accuracy is: {(correct_noobj/(tot_noobj+1e-16))*100:2f}%")
-        print(f"Obj accuracy is: {(correct_obj/(tot_obj+1e-16))*100:2f}%")
+        print(f"Obj accuracy is: {(correct_obj/(tot_obj+1e-16))*100:2f}%")'''

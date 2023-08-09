@@ -11,7 +11,7 @@ def init(model, basic_sanity_check=True, find_max_lr=True, **kwargs):
         if find_max_lr:
             optimizer = kwargs.get('optimizer')
             criterion = kwargs.get('criterion')
-            train_loader = kwargs.get('train_dataloader')
+            train_loader = kwargs.get('train_loader')
             utils.find_lr(model, optimizer, criterion, train_loader)
             print("Set find_max_lr to False to proceed further")
         else:
