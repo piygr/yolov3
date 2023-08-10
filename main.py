@@ -72,15 +72,15 @@ def init(model, basic_sanity_check=True, find_max_lr=True, train=True, **kwargs)
             pred_boxes, true_boxes = utils.get_evaluation_bboxes(
                 val_loader,
                 model,
-                iou_threshold=config.NMS_IOU_THRESH,
-                anchors=config.ANCHORS,
-                threshold=config.CONF_THRESHOLD,
+                iou_threshold=cfg.NMS_IOU_THRESH,
+                anchors=cfg.ANCHORS,
+                threshold=cfg.CONF_THRESHOLD,
             )
             mapval = utils.mean_average_precision(
                 pred_boxes,
                 true_boxes,
-                iou_threshold=config.MAP_IOU_THRESH,
+                iou_threshold=cfg.MAP_IOU_THRESH,
                 box_format="midpoint",
-                num_classes=config.NUM_CLASSES,
+                num_classes=cfg.NUM_CLASSES,
             )
             print(f"MAP: {mapval.item()}")
