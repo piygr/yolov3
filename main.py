@@ -2,7 +2,7 @@ from dataset import *
 from models.YoloV3Lightning import *
 import utils
 
-def init(model, basic_sanity_check=True, find_max_lr=True, **kwargs):
+def init(model, basic_sanity_check=True, find_max_lr=True, train=True, **kwargs):
     if basic_sanity_check:
         validate_dataset()
         sanity_check(model)
@@ -19,25 +19,56 @@ def init(model, basic_sanity_check=True, find_max_lr=True, **kwargs):
             train_loader = kwargs.get('train_loader')
             val_loader = kwargs.get('test_loader')
 
-            trainer = pl.Trainer(
-                precision=16,
-                max_epochs=cfg.NUM_EPOCHS,
-                accelerator='gpu'
+            if train:
+                trainer = pl.Trainer(
+                    precision=16,
+                    max_epochs=cfg.NUM_EPOCHS,
+                    accelerator='gpu'
+                )
+
+                cargs = {}
+                if cfg.LOAD_MODEL:
+                    cargs = dict(ckpt_path=cfg.CHECKPOINT_FILE)
+
+                trainer.fit(model, train_loader, val_loader, **cargs)
+            else:
+                ckpt_file = kwargs.get('ckpt_file')
+                if ckpt_file:
+                    checkpoint = utils.load_model_from_checkpoint(cfg.DEVICE, file_name=ckpt_file)
+                    model.load_state_dict(checkpoint['model'], strict=False)
+
+            #-- Printing samples
+            model.to(cfg.DEVICE)
+            model.eval()
+            cfg.IMG_DIR = cfg.DATASET + "/images/"
+            cfg.LABEL_DIR = cfg.DATASET + "/labels/"
+            eval_dataset = YOLODataset(
+                cfg.DATASET + "/test.csv",
+                transform=cfg.test_transforms,
+                S=[cfg.IMAGE_SIZE // 32, cfg.IMAGE_SIZE // 16, cfg.IMAGE_SIZE // 8],
+                img_dir=cfg.IMG_DIR,
+                label_dir=cfg.LABEL_DIR,
+                anchors=cfg.ANCHORS,
+                mosaic=False
             )
-
-            cargs = {}
-            if cfg.LOAD_MODEL:
-                cargs = dict(ckpt_path=cfg.CHECKPOINT_FILE)
-
-            trainer.fit(model, train_loader, val_loader, **cargs)
-
+            eval_loader = DataLoader(
+                dataset=eval_dataset,
+                batch_size=cfg.BATCH_SIZE,
+                num_workers=cfg.NUM_WORKERS,
+                pin_memory=cfg.PIN_MEMORY,
+                shuffle=True,
+                drop_last=False,
+            )
 
             scaled_anchors = (
                     torch.tensor(cfg.ANCHORS)
                     * torch.tensor(cfg.S).unsqueeze(1).unsqueeze(1).repeat(1, 3, 2)
             )
-            utils.plot_couple_examples(model, val_loader, 0.6, 0.5, scaled_anchors)
+            scaled_anchors = scaled_anchors.to(cfg.DEVICE)
 
+            utils.plot_examples(model, eval_loader, 0.5, 0.6, scaled_anchors)
+
+            # -- Printing MAP
             pred_boxes, true_boxes = utils.get_evaluation_bboxes(
                 val_loader,
                 model,

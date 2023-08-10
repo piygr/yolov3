@@ -478,6 +478,7 @@ def get_loaders(train_csv_path, test_csv_path):
 
     return train_loader, test_loader, train_eval_loader
 
+'''
 def plot_couple_examples(model, loader, thresh, iou_thresh, anchors):
     model.eval()
     x, y = next(iter(loader))
@@ -502,6 +503,7 @@ def plot_couple_examples(model, loader, thresh, iou_thresh, anchors):
         )
         plot_image(x[i].permute(1,2,0).detach().cpu(), nms_boxes)
 
+'''
 
 
 def seed_everything(seed=42):
@@ -568,7 +570,29 @@ def find_lr(model, optimizer, criterion, data_loader):
     _, best_lr = lr_finder.plot()  # to inspect the loss-learning rate graph
     lr_finder.reset()
 
-def load_model_from_checkpoint(device, file_name='checkpoint.ckpt'):
-    checkpoint = torch.load('ckpt_light.pth', map_location=device)
+def load_model_from_checkpoint(device, file_name='ckpt_light.pth'):
+    checkpoint = torch.load(file_name, map_location=device)
 
     return checkpoint
+
+def plot_examples(model, loader, iou_threshold, threshold, anchors):
+
+    print(anchors.device)
+    x, y = next(iter(loader))
+    x = x.to(cfg.DEVICE)
+    out = model(x)
+    bboxes = [[] for _ in range(x.shape[0])]
+    for i in range(3):
+        batch_size, A, S, _, _ = out[i].shape
+        anchor = anchors[i]
+        boxes_scale_i = cells_to_bboxes(
+            out[i], anchor, S=S, is_preds=True
+        )
+        for idx, (box) in enumerate(boxes_scale_i):
+            bboxes[idx] += box
+
+    for i in range(batch_size // 4):
+        nms_boxes = non_max_suppression(
+            bboxes[i], iou_threshold=0.5, threshold=0.6, box_format="midpoint",
+        )
+        plot_image(x[i].permute(1, 2, 0).detach().cpu(), nms_boxes)
