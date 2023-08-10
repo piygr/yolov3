@@ -70,7 +70,7 @@ def init(model, basic_sanity_check=True, find_max_lr=True, train=True, **kwargs)
 
             # -- Printing MAP
             pred_boxes, true_boxes = utils.get_evaluation_bboxes(
-                val_loader,
+                eval_loader,
                 model,
                 iou_threshold=cfg.NMS_IOU_THRESH,
                 anchors=cfg.ANCHORS,
