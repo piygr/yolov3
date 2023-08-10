@@ -567,3 +567,8 @@ def find_lr(model, optimizer, criterion, data_loader):
     lr_finder.range_test(data_loader, end_lr=100, num_iter=100)
     _, best_lr = lr_finder.plot()  # to inspect the loss-learning rate graph
     lr_finder.reset()
+
+def load_model_from_checkpoint(device, file_name='checkpoint.ckpt'):
+    checkpoint = torch.load('ckpt_light.pth', map_location=device)
+
+    return checkpoint

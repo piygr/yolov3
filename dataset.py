@@ -32,6 +32,7 @@ class YOLODataset(Dataset):
             S=[13, 26, 52],
             C=20,
             transform=None,
+            mosaic=True
     ):
         self.annotations = pd.read_csv(csv_file)
         self.img_dir = img_dir
@@ -45,6 +46,7 @@ class YOLODataset(Dataset):
         self.num_anchors_per_scale = self.num_anchors // 3
         self.C = C
         self.ignore_iou_thresh = 0.5
+        self.mosaic = mosaic
 
     def __len__(self):
         return len(self.annotations)
@@ -103,7 +105,7 @@ class YOLODataset(Dataset):
 
     def __getitem__(self, index):
 
-        if random.random() <= 0.75:
+        if self.mosaic and random.random() <= 0.75:
             image, bboxes = self.load_mosaic(index)
         else:
             label_path = os.path.join(self.label_dir, self.annotations.iloc[index, 1])
