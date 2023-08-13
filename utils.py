@@ -13,6 +13,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
+
+
 def iou_width_height(boxes1, boxes2):
     """
     Parameters:
@@ -478,33 +480,6 @@ def get_loaders(train_csv_path, test_csv_path):
 
     return train_loader, test_loader, train_eval_loader
 
-'''
-def plot_couple_examples(model, loader, thresh, iou_thresh, anchors):
-    model.eval()
-    x, y = next(iter(loader))
-    x = x.to("cuda")
-    with torch.no_grad():
-        out = model(x)
-        bboxes = [[] for _ in range(x.shape[0])]
-        for i in range(3):
-            batch_size, A, S, _, _ = out[i].shape
-            anchor = anchors[i]
-            boxes_scale_i = cells_to_bboxes(
-                out[i], anchor, S=S, is_preds=True
-            )
-            for idx, (box) in enumerate(boxes_scale_i):
-                bboxes[idx] += box
-
-        model.train()
-
-    for i in range(batch_size//4):
-        nms_boxes = non_max_suppression(
-            bboxes[i], iou_threshold=iou_thresh, threshold=thresh, box_format="midpoint",
-        )
-        plot_image(x[i].permute(1,2,0).detach().cpu(), nms_boxes)
-
-'''
-
 
 def seed_everything(seed=42):
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -593,6 +568,6 @@ def plot_examples(model, loader, iou_threshold, threshold, anchors):
 
     for i in range(batch_size // 4):
         nms_boxes = non_max_suppression(
-            bboxes[i], iou_threshold=0.5, threshold=0.6, box_format="midpoint",
+            bboxes[i], iou_threshold=iou_threshold, threshold=threshold, box_format="midpoint",
         )
         plot_image(x[i].permute(1, 2, 0).detach().cpu(), nms_boxes)
