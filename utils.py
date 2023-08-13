@@ -469,6 +469,7 @@ def get_loaders(train_csv_path, test_csv_path):
         img_dir=cfg.IMG_DIR,
         label_dir=cfg.LABEL_DIR,
         anchors=cfg.ANCHORS,
+        mosaic=False
     )
     train_eval_loader = DataLoader(
         dataset=train_eval_dataset,
