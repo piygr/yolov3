@@ -28,7 +28,7 @@ class YoloLoss(pl.LightningModule):
         self.scaled_anchors = (
             torch.tensor(cfg.ANCHORS)
             * torch.tensor(cfg.S).unsqueeze(1).unsqueeze(1).repeat(1, 3, 2)
-        )
+        ).to(cfg.DEVICE)
 
     def forward(self, predictions_list, target_list, **kwargs):
 
