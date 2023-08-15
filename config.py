@@ -35,7 +35,7 @@ ANCHORS = [
 means = [0.485, 0.456, 0.406]
 
 scale = 1.1
-multi_resolution_scale = [0.8, 1.1, 1.4]
+multi_resolution_scale = [0.8, 1.0, 1.4]
 train_transforms = A.Compose(
     [
         A.LongestMaxSize(max_size=int(IMAGE_SIZE * random.choices(multi_resolution_scale)[0])),
