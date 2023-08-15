@@ -1,7 +1,7 @@
 import albumentations as A
 import cv2
 import torch
-
+import random
 from albumentations.pytorch import ToTensorV2
 
 SAMPLE_DATASET = '../../input/d/piygro/sample-pascal/PASCAL_VOC'
@@ -35,9 +35,10 @@ ANCHORS = [
 means = [0.485, 0.456, 0.406]
 
 scale = 1.1
+multi_resolution_scale = [0.8, 1.1, 1.4]
 train_transforms = A.Compose(
     [
-        A.LongestMaxSize(max_size=int(IMAGE_SIZE * scale)),
+        A.LongestMaxSize(max_size=int(IMAGE_SIZE * random.choices(multi_resolution_scale)[0])),
         A.PadIfNeeded(
             min_height=int(IMAGE_SIZE * scale),
             min_width=int(IMAGE_SIZE * scale),
